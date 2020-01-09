@@ -16,7 +16,8 @@ def get_usd():
         response_text = response.text
 
         obj = BeautifulSoup(response_text, "html.parser")
-        aa = obj.select("div.stock_up.inner_price em.txt_num")
+        aa = obj.select("div.info_price div.inner_info_price em.txt_num")
+        print(aa)
         if aa is not None and len(aa)>0:
             usd = float(aa[0].get_text())
         
