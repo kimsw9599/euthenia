@@ -131,9 +131,9 @@ def main(argv):
         if usd < EXPECTED_USD:
             print("Because current ${} is greater than ${}, this process is skipped.".format(usd, EXPECTED_USD))
             # 지난 번에 수집했던 USD랑 비교해서 가격이 하락 경우엔 slack를 현재 USD 가격을 보낸다. 
-            send_slack_alart_mesg(slack_m, usd, last_usd)
+            send_slack_alart_mesg(slack_m, usd, "%.2f" % last_usd)
         else:
-            send_slack_info_mesg(slack_m, usd, last_usd)
+            send_slack_info_mesg(slack_m, usd, "%.2f" % last_usd)
     else:
         print("Same currency value")        
 
