@@ -3,13 +3,94 @@
 import sys
 import requests
 from bs4 import BeautifulSoup
+import sqlite3
+from sqlite3 import Error
+from decimal import Decimal
+from slacker import Slacker
+
+
+# 우리은행 일별 환율 https://svc.wooribank.com/svc/Dream?withyou=CMCOM0184
 
 EXPECTED_USD = 1155.0
+DATABASE = r"./exchage_rate.db"
+
+conn = None
+slack_m = None
+channel_name = "#newfun"
+
+def set_slacker(token):
+    slack_m = Slacker(token)
+    return slack_m
+
+def get_slack_token():
+    f = open("./slack_token", 'r')
+    token = f.readline()
+    print(token)
+    f.close()
+
+    return token
+
+def send_slack_alart_mesg(slack_m, current_usd, last_usd):
+    if slack_m is not None:
+        message = "<@sunfun>  Last $1:{} => Current $1:{}".format(str(last_usd), str(current_usd))
+        msg=slack_m.chat.post_message(channel_name, message, username="QuantSun")
+        print(msg)
+    else:
+        print("??????")
+
+def send_slack_info_mesg(slack_m, current_usd, last_usd):
+    if slack_m is not None:
+        message = "Last $1:{} => Current $1:{}".format(str(last_usd), str(current_usd))
+        msg = slack_m.chat.post_message(channel_name, message, username="QuantSun")
+        print(msg)
+    else:
+        print("??????")
+
+def create_connection(db_file):
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print("open database")
+    except Error as e:
+        print(e)
+ 
+    return conn
+
+def get_last_usd(conn):
+    if conn is not None:
+        cur = conn.cursor()
+        cur.execute("SELECT currency_value FROM tbl_currency2 where currency_name='USD' order by crawl_date limit 1")
+
+        rows = cur.fetchall()
+        print(rows)
+        if len(rows) > 0:
+            return rows[0][0]
+        else:
+            return -1
+    else:
+        return -1
+
+def save_last_usd(conn, current_usd):
+    # SQLite를 활용해서 저장하기 
+    sql = "insert into tbl_currency2 (currency_name, currency_value) values('USD', ?)"
+
+    cur = conn.cursor()
+    cur.execute(sql, (str(current_usd),))
+    conn.commit()
+    return cur.lastrowid
 
 def get_usd():
+    headers = {
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/71.0.3578.98 Safari/537.36User-Agent"
+    }
+
     url = "https://search.daum.net/search?w=tot&DA=UME&t__nil_searchbox=suggest&sug=&sugo=15&sq=%ED%99%98%EC%9C%A8&o=1&q=%ED%99%98%EC%9C%A8"
 
-    response = requests.get(url)
+    response = requests.get(url, headers=headers)
 
     usd = 0.0
     if response.status_code == 200:
@@ -19,41 +100,39 @@ def get_usd():
         aa = obj.select("div.info_price div.inner_info_price em.txt_num")
         print(aa)
         if aa is not None and len(aa)>0:
-            usd = float(aa[0].get_text())
+            usd = Decimal(aa[0].get_text())
+        else:
+            print("Cannot crawl USD currency value!!")
         
     return usd
 
-def get_last_usd():
-    last_usd = 0.0
-    return last_usd
-
-def save_last_usd(current_usd):
-    # SQLite를 활용해서 저장하기 
-    pass
-
-def send_slack_alart_mesg(current_usd, last_usd):
-    pass
-
-def send_slack_info_mesg(current_usd, last_usd):
-    pass
-
 def main(argv):
-    # US 달러를 가져온다. 
+    slack_token = get_slack_token()
+    slack_m = set_slacker(slack_token)
+
+    conn = create_connection(DATABASE)
+
+    if conn is None:
+        print("Error! Can't connect database.")
+        return
+
+    last_usd = get_last_usd(conn)
     usd = get_usd()
+
+    print(last_usd)
     print(usd)
 
-    # 가져온 USD가 기준 점 이하인가 체크한다. 
-    if usd < EXPECTED_USD:
-        # 지난 번에 수집했던 USD랑 비교해서 가격이 하락 경우엔 slack를 현재 USD 가격을 보낸다. 
-        last_usd = get_last_usd()
-        if last_usd > usd:
-            send_slack_alart_mesg(usd, last_usd)
-        else:
-            send_slack_info_mesg(usd, last_usd)
-    else:
-        print("Because current ${} is greater than ${}, this process is skipped.".format(usd, EXPECTED_USD))
+    if usd != last_usd:
+        save_last_usd(conn, usd)
 
-    save_last_usd(usd)
+        if usd < EXPECTED_USD:
+            print("Because current ${} is greater than ${}, this process is skipped.".format(usd, EXPECTED_USD))
+            # 지난 번에 수집했던 USD랑 비교해서 가격이 하락 경우엔 slack를 현재 USD 가격을 보낸다. 
+            send_slack_alart_mesg(slack_m, usd, last_usd)
+        else:
+            send_slack_info_mesg(slack_m, usd, last_usd)
+    else:
+        print("Same currency value")        
 
 
 if __name__ == "__main__":
