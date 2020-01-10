@@ -5,11 +5,14 @@ import requests
 from bs4 import BeautifulSoup
 import sqlite3
 from sqlite3 import Error
-from decimal import Decimal
+from decimal import *
 from slacker import Slacker
 
 
 # 우리은행 일별 환율 https://svc.wooribank.com/svc/Dream?withyou=CMCOM0184
+
+myothercontext = Context(prec=3, rounding=ROUND_HALF_DOWN)
+setcontext(myothercontext)
 
 EXPECTED_USD = 1155.0
 DATABASE = r"./exchage_rate.db"
@@ -59,7 +62,7 @@ def create_connection(db_file):
 def get_last_usd(conn):
     if conn is not None:
         cur = conn.cursor()
-        cur.execute("SELECT currency_value FROM tbl_currency2 where currency_name='USD' order by crawl_date limit 1")
+        cur.execute("SELECT currency_value FROM tbl_currency2 where currency_name='USD' order by crawl_date desc limit 1")
 
         rows = cur.fetchall()
         print(rows)
@@ -116,8 +119,8 @@ def main(argv):
         print("Error! Can't connect database.")
         return
 
-    last_usd = get_last_usd(conn)
-    usd = get_usd()
+    last_usd = Decimal(get_last_usd(conn))
+    usd = Decimal(get_usd())
 
     print(last_usd)
     print(usd)
