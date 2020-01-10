@@ -125,7 +125,10 @@ def main(argv):
     print(last_usd)
     print(usd)
 
-    if usd != last_usd:
+    last_usd_s = "%.2f" % (get_last_usd(conn))
+    usd_s = "%.2f" % (get_usd())
+
+    if usd_s != last_usd_s:
         save_last_usd(conn, usd)
 
         if usd < EXPECTED_USD:
