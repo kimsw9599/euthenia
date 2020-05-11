@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup
 import sqlite3
 from sqlite3 import Error
 from decimal import *
-from slacker import Slacker
+#from slacker import Slacker
+from slackclient import SlackClient
 
 
 # 우리은행 일별 환율 https://svc.wooribank.com/svc/Dream?withyou=CMCOM0184
@@ -14,7 +15,7 @@ from slacker import Slacker
 myothercontext = Context(prec=3, rounding=ROUND_HALF_DOWN)
 setcontext(myothercontext)
 
-EXPECTED_USD = 1155.0
+EXPECTED_USD = 1220.0
 DATABASE = r"./exchage_rate.db"
 
 conn = None
@@ -22,7 +23,8 @@ slack_m = None
 channel_name = "#newfun"
 
 def set_slacker(token):
-    slack_m = Slacker(token)
+#    slack_m = Slacker(token)
+    slack_m = SlackClient(token)
     return slack_m
 
 def get_slack_token():
@@ -36,7 +38,8 @@ def get_slack_token():
 def send_slack_alart_mesg(slack_m, current_usd, last_usd):
     if slack_m is not None:
         message = "<@sunfun>  Last $1:{} => Current $1:{}".format(str(last_usd), str(current_usd))
-        msg=slack_m.chat.post_message(channel_name, message, username="QuantSun")
+#        msg=slack_m.chat.post_message(channel_name, message, username="QuantSun")
+        msg = slack_m.api_call("chat.postMessage", channel=channel_name, username="QuantSun", icon_emoji=":dart:")	
         print(msg)
     else:
         print("??????")
@@ -44,7 +47,8 @@ def send_slack_alart_mesg(slack_m, current_usd, last_usd):
 def send_slack_info_mesg(slack_m, current_usd, last_usd):
     if slack_m is not None:
         message = "Last $1:{} => Current $1:{}".format(str(last_usd), str(current_usd))
-        msg = slack_m.chat.post_message(channel_name, message, username="QuantSun")
+        msg = slack_m.api_call("chat.postMessage", channel=channel_name, username="QuantSun", icon_emoji=":dart:")	
+        #msg = slack_m.chat.post_message(channel_name, message, username="QuantSun")
         print(msg)
     else:
         print("??????")
@@ -91,7 +95,8 @@ def get_usd():
                         "Chrome/71.0.3578.98 Safari/537.36User-Agent"
     }
 
-    url = "https://search.daum.net/search?w=tot&DA=UME&t__nil_searchbox=suggest&sug=&sugo=15&sq=%ED%99%98%EC%9C%A8&o=1&q=%ED%99%98%EC%9C%A8"
+    # url = "https://search.daum.net/search?w=tot&DA=UME&t__nil_searchbox=suggest&sug=&sugo=15&sq=%ED%99%98%EC%9C%A8&o=1&q=%ED%99%98%EC%9C%A8"
+    url = "https://search.daum.net/search?nil_suggest=sugsch&w=tot&DA=EKS&sug=totex&q=%EB%8B%AC%EB%9F%AC%20%ED%99%98%EC%9C%A8%EC%A1%B0%ED%9A%8C"
 
     response = requests.get(url, headers=headers)
 
