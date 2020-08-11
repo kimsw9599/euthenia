@@ -1,4 +1,6 @@
 requests
 beautifulsoup4
 slacker
-slackclient==1.3.2
+slackclient
+sqlalchemy
+

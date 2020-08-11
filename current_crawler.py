@@ -7,7 +7,7 @@ import sqlite3
 from sqlite3 import Error
 from decimal import *
 #from slacker import Slacker
-from slackclient import SlackClient
+from slack import WebClient
 import json
 
 
@@ -29,7 +29,7 @@ user_name = "NewFun" #sunfun2"
 
 def set_slacker(token):
 #    slack_m = Slacker(token)
-    slack_m = SlackClient(token)
+    slack_m = WebClient(token)
     return slack_m
 
 
@@ -51,8 +51,8 @@ def send_slack_alart_mesg(slack_m, current_usd, last_usd):
             "text" : message 
             }]
 #        msg=slack_m.chat.post_message(channel_name, message, username="QuantSun")
-        msg = slack_m.api_call("chat.postMessage"
-                , channel=channel_name_noti
+        msg = slack_m.chat_postMessage(
+                  channel=channel_name_noti
                 , username=user_name
                 , icon_emoji=":dart:"
                 , attachments=attachments)	
@@ -65,7 +65,8 @@ def send_slack_alart_mesg(slack_m, current_usd, last_usd):
 def send_slack_info_mesg(slack_m, current_usd, last_usd):
     if slack_m is not None:
         message = "Last $1:{} => Current $1:{}".format(str(last_usd), str(current_usd))
-        msg = slack_m.api_call("chat.postMessage", 
+
+        msg = slack_m.chat_postMessage(
                 channel=channel_name, 
                 username=user_name, icon_emoji=":dart:", text=message)	
         #msg = slack_m.chat.post_message(channel_name, message, username="QuantSun")
